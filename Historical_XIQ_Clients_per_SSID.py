@@ -75,9 +75,9 @@ def main():
 		startTime = currenttime.strftime('%Y-%m-%dT%H:%M:%S.000Z')
 		endTime = currenttime + datetime.timedelta (hours=iterationhours)
 		endTime = endTime.strftime('%Y-%m-%dT%H:%M:%S.000Z')
-		print(f"collecting client data for {startTime}")
-		url = f"{baseurl}/xapi/v1/monitor/clients?startTime={startTime}&endTime={endTime}"
-	
+		print("collecting client data for {}".format(startTime))
+		url = "{}/xapi/v1/monitor/clients?startTime={}&endTime={}".format(baseurl, startTime, endTime)
+		
 	
 		pageCount = 0
 		try:
