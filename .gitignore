@@ -4,3 +4,4 @@ venv/
 .Python
 XIQ_report.xlsx
 data.json
+time.py
