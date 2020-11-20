@@ -4,6 +4,7 @@ import json
 import math
 import time
 import os
+from requests.exceptions import HTTPError
 
 today = time.strftime("%Y-%m-%d %H:%M")
 PATH = os.path.dirname(os.path.abspath(__file__))
@@ -16,7 +17,6 @@ ownerId = '94009'
 DATACENTER = 'ava'
 
 
-
 baseurl = 'https://{}.extremecloudiq.com'.format(DATACENTER)
 HEADERS= {
 	'X-AH-API-CLIENT-ID':CLIENTID,
@@ -27,24 +27,33 @@ HEADERS= {
 	}
 
 ssidlist = {}
+secondtry = []
+pagesize = '5'
 
-def get_api_call(url,page=0):
-	url = '{}{}?ownerId={}&page={}'.format(baseurl, url, ownerId, page)
+
+def get_api_call(url,page=0,pageCount=0):
+	url = '{}?ownerId={}&page={}'.format(url, ownerId, page)
 
 	## used for page testing
-	#url = url+"&pageSize=10"
-	#print(url)
+	if pagesize:
+		url = url+(f"&pageSize={pagesize}")
+	if pageCount != 0:
+		print(f"API call on {page} of {pageCount}")
 
 	try:
-		r = requests.get(url, headers=HEADERS, timeout=10)
-	except:
-		raise TypeError("API request failed")
-	data = json.loads(r.text)
-	if 'error' in data:
-		if data['error']:
-			failmsg = data['error']['message']
-			raise TypeError("API Failed with reason: {}".format(failmsg))
-	return data
+		r = requests.get(url, headers=HEADERS, timeout=3)
+	except HTTPError as http_err:
+		secondtry.append(url)
+		raise HTTPError(f'HTTP error occurred: {http_err} - on API {url}')  # Python 3.6
+	except Exception as err:
+		raise TypeError(f'Other error occurred: {err}: on API {url}')
+	else:
+		data = json.loads(r.text)
+		if 'error' in data:
+			if data['error']:
+				failmsg = data['error']['message']
+				raise TypeError(f"API Failed with reason: {failmsg} - on API {url}")
+		return data
 
 def clientCount(data):
 	global ssidlist
@@ -53,48 +62,70 @@ def clientCount(data):
 			ssidlist[client['ssid']]=[]
 		ssidlist[client['ssid']].append(client['clientId'])
 
-url = "/xapi/v1/monitor/clients"
-pageCount = 0
-try:
-	data = get_api_call(url)
-except TypeError as e:
-	print("{} - on API {}".format(e, url))
-	exit()
-except:
-	print('unknown API error')
-	exit()
-
-totalCount = data['pagination']['totalCount']
-countInPage = data['pagination']['countInPage']
-
-clientCount(data)
-
-if countInPage < totalCount:
-	pageCount = math.ceil(int(totalCount)/int(countInPage))
-	for page in range(int(pageCount)):
-		page+=1
+#add second try
+def main():
+	url = (f"{baseurl}/xapi/v1/monitor/clients")
+	pageCount = 0
+	success = 0
+	count = 0
+	while success == 0:
+		if count > 5:
+			success = 2
+			print(f"API call has failed more than 5 times: {url}")
 		try:
-			data = get_api_call(url,str(page))
+			data = get_api_call(url)
 		except TypeError as e:
-			print("{} - on API {}".format(e, url))
+			count=+1
+			print(f"{e} - attempt {count} of 5")
+			
+		except HTTPError as e:
+			print(f"{e}")
 			exit()
 		except:
-			print('unknown API error')
+			print(f"unknown API error: on API {url}")
 			exit()
-		clientCount(data)
-if not os.path.exists('data.json'):
-	ssid_dic = {}
-else:
-	with open('{}/data.json'.format(PATH), 'r') as f:
-		try:
-			ssid_dic = json.load(f)
-		except ValueError:
-			ssid_dic = {}
+		else:
+			print(f"{url} - successful connection")
+			success = 1
 
-ssid_dic[today]={}
-for ssid in ssidlist:
-	ssid_dic[today][ssid]= len(ssidlist[ssid])
+	totalCount = data['pagination']['totalCount']
+	countInPage = data['pagination']['countInPage']
 
+	clientCount(data)
 
-with open('{}/data.json'.format(PATH), 'w') as f:
-	json.dump(ssid_dic, f)
+	if countInPage < totalCount:
+		pageCount = math.ceil(int(totalCount)/int(countInPage))
+		for page in range(int(pageCount)):
+			page+=1
+			try:
+				data = get_api_call(url,str(page),pageCount)
+			except TypeError as e:
+				print(f"{e}")
+				continue
+			except HTTPError as e:
+				print(f"{e}")
+				continue
+			except:
+				print(f"unknown API error: on API {url}")
+				continue
+			clientCount(data)
+	if not os.path.exists('data.json'):
+		ssid_dic = {}
+	else:
+		with open('{}/data.json'.format(PATH), 'r') as f:
+			try:
+				ssid_dic = json.load(f)
+			except ValueError:
+				ssid_dic = {}
+
+	ssid_dic[today]={}
+	for ssid in ssidlist:
+		ssid_dic[today][ssid]= len(ssidlist[ssid])
+	if secondtry:
+		print(secondtry)
+	print(ssid_dic)
+	#with open('{}/data.json'.format(PATH), 'w') as f:
+	#	json.dump(ssid_dic, f)
+	
+if __name__ == '__main__':
+	main()

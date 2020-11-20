@@ -60,6 +60,7 @@ def clientCount(data):
 
 
 def main():
+	secondtry = []
 	if not os.path.exists('data.json'):
 		ssid_dic = {}
 	else:
@@ -84,10 +85,10 @@ def main():
 			data = get_api_call(url)
 		except TypeError as e:
 			print("{} - on API {}".format(e, url))
-			exit()
+			continue
 		except:
 			print('unknown API error')
-			exit()
+			continue
 		
 		totalCount = data['pagination']['totalCount']
 		countInPage = data['pagination']['countInPage']
@@ -111,11 +112,11 @@ def main():
 		ssid_dic[startTime]={}
 		for ssid in ssidlist:
 			ssid_dic[startTime][ssid]= len(ssidlist[ssid])
-		
-		currenttime = currenttime - datetime.timedelta (hours=iterationhours)
 	
-	with open('{}/data.json'.format(PATH), 'w') as f:
-		json.dump(ssid_dic, f)
+		with open('{}/data.json'.format(PATH), 'w') as f:
+			json.dump(ssid_dic, f)
+			
+		currenttime = currenttime - datetime.timedelta (hours=iterationhours)
 
 if __name__ == '__main__':
 	main()
