@@ -55,6 +55,21 @@ def get_api_call(url,page=0,pageCount=0):
 				raise TypeError(f"API Failed with reason: {failmsg} - on API {url}")
 		return data
 
+def Second_api_call(url):
+	try:
+		r = requests.get(url, headers=HEADERS, timeout=10)
+	except HTTPError as http_err:
+		raise HTTPError(f'\nAPI CALL FAILED SECOND TRY\nHTTP error occurred: {http_err} - on API {url}')  # Python 3.6
+	except Exception as err:
+		raise TypeError(f'\nAPI CALL FAILED SECOND TRY\nOther error occurred: {err}: on API {url}')
+	else:
+		data = json.loads(r.text)
+		if 'error' in data:
+			if data['error']:
+				failmsg = data['error']['message']
+				raise TypeError(f"\nAPI CALL FAILED SECOND TRY\nAPI Failed with reason: {failmsg} - on API {url}")
+		return data
+		
 def clientCount(data):
 	global ssidlist
 	for client in data['data']:
@@ -122,10 +137,30 @@ def main():
 	for ssid in ssidlist:
 		ssid_dic[today][ssid]= len(ssidlist[ssid])
 	if secondtry:
-		print(secondtry)
+		for url in secondtry:
+			try:
+				data = Second_api_call(url)
+			except TypeError as e:
+				faillist.append(url)
+				print(f"{e}")
+				continue
+			except HTTPError as e:
+				faillist.append(url)
+				print(f"{e}")
+				continue
+			except:
+				faillist.append(url)
+				print(f"unknown API error: on API {url}")
+				continue
+			print(f"Retry Successful for {url}")
+			clientCount(data)
 	print(ssid_dic)
 	#with open('{}/data.json'.format(PATH), 'w') as f:
 	#	json.dump(ssid_dic, f)
+	if faillist:
+		print("\nThese API calls failed 2 times and data was not collected:")
+		for failurl in faillist:
+			print(failurl)
 	
 if __name__ == '__main__':
 	main()
