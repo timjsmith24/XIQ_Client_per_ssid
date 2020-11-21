@@ -13,7 +13,7 @@ today = datetime.datetime.now(UTC)
 PATH = os.path.dirname(os.path.abspath(__file__))
 
 # Used to setting times in API call
-API_start_time = today - datetime.timedelta (days=1)
+API_start_time = today - datetime.timedelta (hours=1)
 API_start_time = API_start_time.strftime('%Y-%m-%dT%H:00:00.000Z')
 API_start_time = datetime.datetime.strptime(API_start_time, '%Y-%m-%dT%H:%M:%S.000Z')
 API_start_time = UTC.localize(API_start_time)
@@ -41,13 +41,19 @@ HEADERS= {
 ssidlist = {}
 secondtry = []
 faillist = []
-pagesize = '' #Value can be added to set page size. If nothing in quotes default value will be used (500)
+pagesize = '2' #Value can be added to set page size. If nothing in quotes default value will be used (500)
 
-
+faillist = [
+	'https://ava.extremecloudiq.com/xapi/v1/monitor/clients?startTime=2020-11-20T16:00:00.000Z&endTime=2020-11-20T17:00:00.000Z&ownerId=94009&page=1&pageSize=2',
+	'https://ava.extremecloudiq.com/xapi/v1/monitor/clients?startTime=2020-11-20T16:00:00.000Z&endTime=2020-11-20T17:00:00.000Z&ownerId=94009&page=3&pageSize=2',
+	'https://ava.extremecloudiq.com/xapi/v1/monitor/clients?startTime=2020-11-20T16:00:00.000Z&endTime=2020-11-20T17:00:00.000Z&ownerId=94009&page=4&pageSize=2',
+	'https://ava.extremecloudiq.com/xapi/v1/monitor/clients?startTime=2020-11-20T16:00:00.000Z&endTime=2020-11-20T17:00:00.000Z&ownerId=94009&page=6&pageSize=2',
+	'https://ava.extremecloudiq.com/xapi/v1/monitor/clients?startTime=2020-11-21T03:00:00.000Z&endTime=2020-11-21T04:00:00.000Z&ownerId=94009&page=1&pageSize=2',
+	'https://ava.extremecloudiq.com/xapi/v1/monitor/clients?startTime=2020-11-21T11:00:00.000Z&endTime=2020-11-21T12:00:00.000Z&ownerId=94009&page=7&pageSize=2'
+	]
 # initial API call
 # if pageCount is defined (all calls per hour after initial call) if the call fails they will be added to the secondtry list 
-def get_api_call(url,page=0,pageCount=0):
-	url = '{}&ownerId={}&page={}'.format(url, ownerId, page)
+def get_api_call(url,pageCount=0):
 
 	## used for page if pagesize is set manually
 	if pagesize:
@@ -57,7 +63,8 @@ def get_api_call(url,page=0,pageCount=0):
 		print(f"API call on {page} of {pageCount}")
 
 	try:
-		r = requests.get(url, headers=HEADERS, timeout=10)
+		print(f"####{url}####")
+		r = requests.get(url, headers=HEADERS, timeout=1)
 	except HTTPError as http_err:
 		if pageCount != 0:
 			secondtry.append(url)
@@ -74,22 +81,6 @@ def get_api_call(url,page=0,pageCount=0):
 				raise TypeError(f"API Failed with reason: {failmsg} - on API {url}")
 		return data
 
-# Used for the 2nd try for API call. If failed they will be added to the faillist list
-def Second_api_call(url):
-	try:
-		r = requests.get(url, headers=HEADERS, timeout=10)
-	except HTTPError as http_err:
-		raise HTTPError(f'\nAPI CALL FAILED SECOND TRY\nHTTP error occurred: {http_err} - on API {url}')  # Python 3.6
-	except Exception as err:
-		raise TypeError(f'\nAPI CALL FAILED SECOND TRY\nOther error occurred: {err}: on API {url}')
-	else:
-		data = json.loads(r.text)
-		if 'error' in data:
-			if data['error']:
-				failmsg = data['error']['message']
-				raise TypeError(f"\nAPI CALL FAILED SECOND TRY\nAPI Failed with reason: {failmsg} - on API {url}")
-		return data
-
 #builds a dictionary of SSIDs with a list of connected clientId. This is then later used to get the count of clients connected to the SSID
 def clientCount(data):
 	global ssidlist
@@ -98,7 +89,20 @@ def clientCount(data):
 			ssidlist[client['ssid']]=[]
 		ssidlist[client['ssid']].append(client['clientId'])
 
-
+def faillist_attempt():
+	global faillist
+	countoffailures = len(faillist)
+	while faillist:
+		prompt_user = input(f"There are {countoffailures} API calls that have failed attempts. Would you like to rety these? (y/n)")
+		while prompt_user.lower() != 'y' and prompt_user.lower() != 'n':
+			prompt_user = input("Please enter 'y' or 'n'")
+		if prompt_user.lower() == 'n':
+			exit()	
+		elif prompt_user.lower() == 'y':
+			for failurl in faillist:
+				print(failurl)
+	
+	
 def main():
 	global today
 	global API_start_time
@@ -113,6 +117,7 @@ def main():
 			except ValueError:
 				ssid_dic = {}
 
+	
 	# loops until API_start_time (current time - 1 day) equals current time. At the end of the loop 1 hour is added to API_start_time
 	while today > API_start_time:
 		# gets the startTime in correct format to be added to the API call
@@ -122,56 +127,91 @@ def main():
 		endTime = endTime.strftime('%Y-%m-%dT%H:%M:%S.000Z')
 		print(f"collecting client data for {startTime}")
 		# adds the base url info as well as the startTime and endTime to the url
-		url = "{}/xapi/v1/monitor/clients?startTime={}&endTime={}".format(baseurl, startTime, endTime)
+		url = "{}/xapi/v1/monitor/clients?ownerId={}&startTime={}&endTime={}".format(baseurl, ownerId, startTime, endTime)
 
 		# default values for next while loop
 		pageCount = 0
 		success = 0 
-		count = 0
-
+		count = 1
+		
 		# initial API call will try 5 times and if fails script will terminate.
 		while success == 0:
 			if count > 5:
-				success =2
 				print(f"API call has failed more than 5 times: {url}")
-				exit()
+				prompt_user = input('Would you like to continue trying 5 more times? (y/n)')
+				while prompt_user.lower() != 'y' and prompt_user.lower() != 'n':
+					prompt_user = input("Please enter 'y' or 'n'")
+				if prompt_user.lower() == 'y':
+					count = 0
+				elif prompt_user.lower() == 'n':
+					print("Please try running the following API call in 'other script'.")
+					print(f"{url}")
+
+					prompt_user = input("\nWould you like to continue with the next iteration? (y/n)")
+					while prompt_user.lower() != 'y' and prompt_user.lower() != 'n':
+						prompt_user = input("Please enter 'y' or 'n'")
+					if prompt_user.lower() == 'y':
+						print(f"Skipping {API_start_time}")
+						success = 2
+						break
+					elif prompt_user.lower() == 'n':
+						exit()					
 			try:
 				data = get_api_call(url)
 			except TypeError as e:
 				count=+1
-				print(f"{e} - attempt {count} of 5")
-				
+				print(f"{e} - attempt {count} of 5")		
 			except HTTPError as e:
-				print(f"{e}")
-				exit()
+				print(f"{e}")		
+				prompt_user = input("Would you like to try this call again? (y/n)")
+				while prompt_user.lower() != 'y' and prompt_user.lower() != 'n':
+					prompt_user = input("Please enter 'y' or 'n'")
+				if prompt_user.lower() == 'y':
+					count+=1
+					print(f"{e} - attempt {count} of 5")
+				elif prompt_user.lower() == 'n':
+					break
 			except:
 				print(f"unknown API error: on API {url}")
-				exit()
+				prompt_user = input("Would you like to try this call again? (y/n)")
+				while prompt_user.lower() != 'y' != 'n':
+					prompt_user = input("Please enter 'y' or 'n'")
+				if prompt_user == 'y':
+					count+=1
+					print(f"Unknown API error - attempt {count} of 5")
+				elif prompt_user == 'n':
+					break
 			else:
-				print(f"successful connection")
+				print("successful connection")
 				success = 1
+		if success == 2:
+			continue
+		
 		# gets total count of clients and the count of clients in the initial call
 		totalCount = data['pagination']['totalCount']
 		countInPage = data['pagination']['countInPage']
-	
 		clientCount(data)
-		
+	
 		# checks to see if client info is missing from initial call
 		if countInPage < totalCount:
 			# calculates the number of pages needed to get all client info (rounded up)
 			pageCount = math.ceil(int(totalCount)/int(countInPage))
 			for page in range(int(pageCount)):
 				page+=1
+				pagedurl = '{}&page={}'.format(url, page)
 				try:
-					data = get_api_call(url,str(page),pageCount)
+					data = get_api_call(pagedurl,pageCount)
 				except TypeError as e:
 					print(f"{e}")
+					secondtry.append(pagedurl)
 					continue
 				except HTTPError as e:
 					print(f"{e}")
+					secondtry.append(pagedurl)
 					continue
 				except:
-					print(f"unknown API error: on API {url}")
+					print(f"unknown API error: on API {pagedurl}")
+					secondtry.append(pagedurl)
 					continue
 				clientCount(data)
 		# adds a dictionary inside of ssid_dic with the value of the startTime
@@ -180,10 +220,11 @@ def main():
 			# adds each ssid and the count of clients into the startTime dictionary
 			ssid_dic[startTime][ssid]= len(ssidlist[ssid])
 		# checks if there are any API calls to try again
+		print(f"\nThere were {len(secondtry)} API calls that failed\n")
 		if secondtry:
 			for url in secondtry:
 				try:
-					data = Second_api_call(url)
+					data = get_api_call(url)
 				except TypeError as e:
 					faillist.append(url)
 					print(f"{e}")
@@ -198,13 +239,14 @@ def main():
 					continue
 				print(f"Retry Successful for {url}")
 				clientCount(data)
+		'''		
 		# over writes the json file with the collected data which includes:
 		### all data imported from the data.json file at the beginning
 		### all data from previous API_start_time values while the script has been running
 		### current API_start_time data
 		with open('{}/data.json'.format(PATH), 'w') as f:
 			json.dump(ssid_dic, f)
-		
+		'''
 		print(f"completed capture at {API_start_time}")
 		# adds hour iteration to the API_start_time for the next loop
 		API_start_time = API_start_time + datetime.timedelta (hours=iteration_hours)
@@ -212,10 +254,9 @@ def main():
 		secondtry = []
 	# if any APIs fail the secondtry they are added to the faillist list. 
 	# this prints the list to be collected seperately
+	
 	if faillist:
-		print("\nThese API calls failed 2 times and data was not collected:")
-		for failurl in faillist:
-			print(failurl)
-		
+		faillist_attempt()
+	#print(ssid_dic)
 if __name__ == '__main__':
 	main()
