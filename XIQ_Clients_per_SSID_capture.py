@@ -44,6 +44,7 @@ faillist = []
 pagesize = '2' #Value can be added to set page size. If nothing in quotes default value will be used (500)
 
 faillist = [
+	https://ava.extremecloudiq.com/xapi/v1/monitor/clients?ownerId=94009&startTime=2020-11-21T17:00:00.000Z&endTime=2020-11-21T18:00:00.000Z&page=3
 	'https://ava.extremecloudiq.com/xapi/v1/monitor/clients?startTime=2020-11-20T16:00:00.000Z&endTime=2020-11-20T17:00:00.000Z&ownerId=94009&page=1&pageSize=2',
 	'https://ava.extremecloudiq.com/xapi/v1/monitor/clients?startTime=2020-11-20T16:00:00.000Z&endTime=2020-11-20T17:00:00.000Z&ownerId=94009&page=3&pageSize=2',
 	'https://ava.extremecloudiq.com/xapi/v1/monitor/clients?startTime=2020-11-20T16:00:00.000Z&endTime=2020-11-20T17:00:00.000Z&ownerId=94009&page=4&pageSize=2',
