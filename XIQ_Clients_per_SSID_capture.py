@@ -280,14 +280,14 @@ def main():
 		for ssid in ssidlist:
 			# adds each ssid and the count of clients into the startTime dictionary
 			ssid_dic[startTime][ssid]= len(ssidlist[ssid])
-		'''
+ 
 		# over writes the json file with the collected data which includes:
 		### all data imported from the data.json file at the beginning
 		### all data from previous API_start_time values while the script has been running
 		### current API_start_time data
 		with open('{}/data.json'.format(PATH), 'w') as f:
 			json.dump(ssid_dic, f)
-		'''
+
 		print(f"completed capture at {API_start_time}\n")
 		
 		# adds hour iteration to the API_start_time for the next loop
@@ -308,15 +308,15 @@ def main():
 				else:
 					totalclientcount = ssid_dic[starttime][failedssid] + faileddata[starttime][failedssid]
 					ssid_dic[starttime][failedssid] = totalclientcount
-	'''
+
 	# over writes the json file with the collected data which includes:
 	### all data imported from the data.json file at the beginning
 	### all data from previous API_start_time values while the script has been running
 	### current API_start_time data from failedlist
 	with open('{}/data.json'.format(PATH), 'w') as f:
 		json.dump(ssid_dic, f)
-	'''
-	print(ssid_dic)
+
+	#print(ssid_dic)
 	
 
 if __name__ == '__main__':
