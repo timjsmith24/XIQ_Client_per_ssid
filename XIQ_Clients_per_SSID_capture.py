@@ -71,7 +71,7 @@ def get_api_call(url, page=0, pageCount=0):
 		data = json.loads(r.text)
 		if 'error' in data:
 			if data['error']:
-				failmsg = data['error']['message']
+				failmsg = (f"Status Code {data['error']['status']}: {data['error']['message']}")
 				raise TypeError(f"API Failed with reason: {failmsg} - on API {url}")
 		return data
 
@@ -201,6 +201,7 @@ def main():
 					count+=1
 					print(f"{e} - attempt {count} of 5")
 				elif prompt_user.lower() == 'n':
+					success = 2
 					break
 			except:
 				print(f"unknown API error: on API {url}")
@@ -211,6 +212,7 @@ def main():
 					count+=1
 					print(f"Unknown API error - attempt {count} of 5")
 				elif prompt_user == 'n':
+					success =2
 					break
 			else:
 				print("successful connection")
