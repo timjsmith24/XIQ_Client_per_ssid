@@ -19,6 +19,10 @@ API_start_time = datetime.datetime.strptime(API_start_time, '%Y-%m-%dT%H:%M:%S.0
 API_start_time = UTC.localize(API_start_time)
 iteration_hours = 1
 
+#### ADD RETRY COUNT VARIABLE HAVE SECONDTRY LIST RETRY FOR COUNT 
+
+#### ADD LOGGING AND LOG MESSAGES INSTEAD OF PRINTING
+
 # Change to correct values 
 CLIENTID = 'e4aac13f'
 SECRET = '6593120f5e4360af47918d70c8df9924'
@@ -53,7 +57,6 @@ def get_api_call(url, page=0, pageCount=0):
 	#print(f"####{url}####")
 	if pageCount != 0:
 		print(f"API call on {page} of {pageCount}")
-
 	try:
 		r = requests.get(url, headers=HEADERS, timeout=10)
 	except HTTPError as http_err:
@@ -187,8 +190,8 @@ def main():
 			try:
 				data = get_api_call(url)
 			except TypeError as e:
-				count=+1
-				print(f"{e} - attempt {count} of 5")		
+				count+=1
+				print(f"{e} - attempt {count} of 5")
 			except HTTPError as e:
 				print(f"{e}")		
 				prompt_user = input("Would you like to try this call again? (y/n)")
