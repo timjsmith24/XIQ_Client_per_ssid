@@ -68,7 +68,7 @@ def get_api_call(url, page=0, pageCount=0):
 		data = json.loads(r.text)
 		if 'error' in data:
 			if data['error']:
-				failmsg = data['error']['message']
+				failmsg = (f"Status Code {data['error']['status']}: {data['error']['message']}")
 				raise TypeError(f"API Failed with reason: {failmsg} - on API {url}")
 		return data
 
@@ -136,15 +136,9 @@ def main():
 	global today
 	global API_start_time
 	global secondtry
-	#checks if data.json file exists. If it exists it loads it into the ssid_dic dictionary. If not creates a empty ssid_dic dictionary
-	if not os.path.exists('data.json'):
-		ssid_dic = {}
-	else:
-		with open('{}/data.json'.format(PATH), 'r') as f:
-			try:
-				ssid_dic = json.load(f)
-			except ValueError:
-				ssid_dic = {}
+	filenamedate = today.strftime('%Y-%m-%d_%H00')
+	
+	ssid_dic = {}
 	
 	# loops until API_start_time (current time - 1 day) equals current time. At the end of the loop 1 hour is added to API_start_time
 	while today > API_start_time:
@@ -187,7 +181,7 @@ def main():
 			try:
 				data = get_api_call(url)
 			except TypeError as e:
-				count=+1
+				count+=1
 				print(f"{e} - attempt {count} of 5")		
 			except HTTPError as e:
 				print(f"{e}")		
@@ -198,6 +192,9 @@ def main():
 					count+=1
 					print(f"{e} - attempt {count} of 5")
 				elif prompt_user.lower() == 'n':
+					if not data:
+						data = {}
+					success = 2
 					break
 			except:
 				print(f"unknown API error: on API {url}")
@@ -208,6 +205,7 @@ def main():
 					count+=1
 					print(f"Unknown API error - attempt {count} of 5")
 				elif prompt_user == 'n':
+					success = 2
 					break
 			else:
 				print("successful connection")
@@ -285,7 +283,7 @@ def main():
 		### all data imported from the data.json file at the beginning
 		### all data from previous API_start_time values while the script has been running
 		### current API_start_time data
-		with open('{}/data.json'.format(PATH), 'w') as f:
+		with open('{}/{}_data.json'.format(PATH,filenamedate), 'w') as f:
 			json.dump(ssid_dic, f)
 
 		print(f"completed capture at {API_start_time}\n")
@@ -313,7 +311,8 @@ def main():
 	### all data imported from the data.json file at the beginning
 	### all data from previous API_start_time values while the script has been running
 	### current API_start_time data from failedlist
-	with open('{}/data.json'.format(PATH), 'w') as f:
+	filenamedate = today.strftime('%Y-%m-%d_%H00')
+	with open('{}/{}_data.json'.format(PATH,filenamedate), 'w') as f:
 		json.dump(ssid_dic, f)
 
 	#print(ssid_dic)

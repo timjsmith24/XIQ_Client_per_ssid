@@ -6,6 +6,8 @@ import pandas
 
 PATH = os.path.dirname(os.path.abspath(__file__))
 
+filename = 'data.json'
+
 def clientperssid(data):
 	msg='TIME/,/ SSID/,/ CLIENT COUNT\n'
 	for timestamp in data:
@@ -14,7 +16,7 @@ def clientperssid(data):
 	return(msg)
 
 def main():
-	if not os.path.exists('data.json'):
+	if not os.path.exists(filename):
 		print("failed to open file")
 		exit()
 	else:
