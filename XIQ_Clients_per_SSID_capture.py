@@ -311,7 +311,7 @@ def main():
 	### all data imported from the data.json file at the beginning
 	### all data from previous API_start_time values while the script has been running
 	### current API_start_time data from failedlist
-	filenamedate = today.strftime('%Y-%m-%d_%H00')
+
 	with open('{}/{}_data.json'.format(PATH,filenamedate), 'w') as f:
 		json.dump(ssid_dic, f)
 
