@@ -31,7 +31,7 @@ pagesize = ''
 ### More information
 This script will use the current UTC time and collect client counts per SSID over the last 24 hours. collection is done every hour but this can be adjusted by changing the iteration_hours variable. 
 
-The output of the script will be the data.json file. If this file exists when the script is ran the script will load that data and continue adding to it.
+The output of the script will be a *_data.json file. The file name will include the current data and time. so for example if the script was ran on Nov 23, 2020 at 5pm the file name would be 112320_1700_data.json.
 
 in addition to client info the initial API call will return the total number of clients as well as how many clients were included in this AP call. The default will only return the first 500 clients but that can be adjusted (preferably lower) with the pagesize variable. Using the total number of clients from this AP call this script will calculate how many pages of API calls will need to be made to collect all the client information. API urls are built and the information collected. 
 
