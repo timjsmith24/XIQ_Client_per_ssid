@@ -115,7 +115,7 @@ Converts the json file to an easy human readable excel file
 ### User Input Data
 For this script user input is added as an arguement when running the script. When calling the script the json file needs to be added.
 ```
-python XIQ_json_to_csv.py 2020-11-24_1600_data_page_1.json
+python XIQ_json_to_csv.py 2020-11-24_1600_data.json
 ```
 ### More information
 When the script runs it will look for that file in the same folder the script is in. If it cannot find that file it will print a message and exit out. If the file is found the data will be parsed and printed to an excel sheet. The excel file will be saved with the same name as the json file but will have the .xlsx extension
