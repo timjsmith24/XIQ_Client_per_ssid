@@ -63,3 +63,59 @@ Attempting retry 1 of 6: Failed - see log file for details
 Attempting retry 2 of 6: Successful
 Attempting retry 3 of 6: Successful
 ```
+
+
+## Historical_XIQ_Clients_per_SSID_capture.py
+This script is located in the Historical Data folder
+### Purpose
+This script will collect the number of clients connected to each SSID per hour over a user defined beginning and end time. The amount of times data is collected can be adjusted but default is set to collect every hour. This data is stored in a json file.
+### User Input Data
+API_start_time (Zulu format). Set the time to start collecting data
+
+API_end_time (Zulu format). Set the time to end collecting data
+
+interation_hours (default 1 hour). This is how frequently the script will pull data
+
+totalretries (default 5). This is how many times the API calls will retry before skipping
+
+###### lines 15-16
+```
+API_start_time = '2020-11-1T18:00:00.000Z'
+API_end_time = '2020-11-20T18:00:00.000Z'
+```
+###### lines 23-24
+```
+iteration_hours = 1
+totalretries = 5
+```
+API info.
+
+###### lines 27-32
+```
+CLIENTID = 'e4aac13f'
+SECRET = '6593120f5e4360af47918d70c8df9924'
+REDIRECT_URI = 'https://bmatwifi.com'
+TOKEN = '7FKFvMHIWvOa2IEceBrNJ_RC_b01-k1pe4aac13f'
+ownerId = '10100'
+DATACENTER = 'ava'
+```
+#### Optional: 
+pagesize (default is ''). This allows the page size of the API call to be adjusted from the default 500 clients. Added desired number between the ''. (ie '100' for 100 clients per call)
+
+###### line 48
+```
+pagesize = ''
+```
+
+## XIQ_json_to_csv.py <filename>
+This script loads a json file and converts it to an excel sheet
+### Purpose
+Converts the json file to an easy human readable excel file
+
+### User Input Data
+For this script user input is added as an arguement when running the script. When calling the script the json file needs to be added.
+```
+python XIQ_json_to_csv.py 2020-11-24_1600_data_page_1.json
+```
+### More information
+When the script runs it will look for that file in the same folder the script is in. If it cannot find that file it will print a message and exit out. If the file is found the data will be parsed and printed to an excel sheet. The excel file will be saved with the same name as the json file but will have the .xlsx extension

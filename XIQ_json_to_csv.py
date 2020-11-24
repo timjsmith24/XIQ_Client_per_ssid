@@ -2,11 +2,18 @@
 import json
 import os
 import pandas
+import argparse
+import re
 
 
 PATH = os.path.dirname(os.path.abspath(__file__))
 
-filename = 'data.json'
+parser = argparse.ArgumentParser() 
+parser.add_argument('jsonfile')
+args = parser.parse_args()
+filename = "{0}".format(args.jsonfile)
+
+
 
 def clientperssid(data):
 	msg='TIME/,/ SSID/,/ CLIENT COUNT\n'
@@ -17,10 +24,10 @@ def clientperssid(data):
 
 def main():
 	if not os.path.exists(filename):
-		print("failed to open file")
+		print(f"failed to open file {filename}")
 		exit()
 	else:
-		with open('{}/data.json'.format(PATH), 'r') as f:
+		with open('{}/{}'.format(PATH, filename), 'r') as f:
 			try:
 				data = json.load(f)
 			except ValueError:
@@ -30,9 +37,9 @@ def main():
 	cpssid_msg = clientperssid(data)
 	cpssid_data = pandas.DataFrame([sub.split("/,/") for sub in cpssid_msg.splitlines()])
 	
-
+	excelfilename = filename.replace('json', 'xlsx')
 	# Create a Pandas Excel writer using XlsxWriter as the engine
-	writer = pandas.ExcelWriter('{}/XIQ_report.xlsx'.format(PATH), engine='xlsxwriter')
+	writer = pandas.ExcelWriter('{}/{}'.format(PATH, excelfilename), engine='xlsxwriter')
 	
 	# Create Sheets
 	sheets = ['Clients per SSID']
@@ -46,7 +53,7 @@ def main():
 	
 	# Close the Pandas Excel writer and output the Excel file
 	writer.save()
-
+	print(f"Successfully wrote data to {excelfilename}")
 
 if __name__ == '__main__':
 	main()
