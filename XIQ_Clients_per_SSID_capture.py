@@ -6,6 +6,7 @@ import time
 import os
 import datetime
 import pytz
+import logging
 from requests.exceptions import HTTPError
 
 UTC = pytz.utc 
@@ -17,13 +18,16 @@ API_start_time = today - datetime.timedelta (days=1)
 API_start_time = API_start_time.strftime('%Y-%m-%dT%H:00:00.000Z')
 API_start_time = datetime.datetime.strptime(API_start_time, '%Y-%m-%dT%H:%M:%S.000Z')
 API_start_time = UTC.localize(API_start_time)
+
+# User variables
 iteration_hours = 1
+totalretries = 5
 
 # Change to correct values 
 CLIENTID = 'e4aac13f'
 SECRET = '6593120f5e4360af47918d70c8df9924'
 REDIRECT_URI = 'https://gthill.com'
-TOKEN = '7FKFvMHIWvOa2IEceBrNJ_RC_b01-k1pe4aac13f'
+TOKEN = '-QO5peeXCX1ytCf89Fu8TPgKrfI89VV-e4aac13f'
 ownerId = '94009'
 DATACENTER = 'ava'
 
@@ -37,11 +41,27 @@ HEADERS= {
 	'Content-Type': 'application/json'
 	}
 
+
 # Global Objects
 ssidlist = {}
 secondtry = []
-faillist = []
 pagesize = '' #Value can be added to set page size. If nothing in quotes default value will be used (500)
+
+# logging for any API ERRORs
+logging.basicConfig(
+	filename='{}/XIQ_CPS_Capture.log'.format(PATH),
+	filemode='a',
+	level=os.environ.get("LOGLEVEL", "INFO"),
+	format= '{}: %(name)s - %(levelname)s - %(message)s'.format(time.strftime("%Y-%m-%d %H:%M"))
+)
+
+# used for debuging
+def debug_print(msg):
+	print(msg)
+	#lines = msg.splitlines()
+	#for line in lines:
+	#	logging.info(msg)
+
 
 # function that makes the API call with the provided url
 # if pageCount is defined (all calls per hour after initial call) if the call fails they will be added to the secondtry list 
@@ -52,7 +72,7 @@ def get_api_call(url, page=0, pageCount=0):
 	## the first call will not show as the data returned is used to collect the total count of Clients which is used for the page count
 	#print(f"####{url}####")
 	if pageCount != 0:
-		print(f"API call on {page} of {pageCount}")
+		print(f"API call on page {page} of {pageCount-1}", end=": ")
 
 	try:
 		r = requests.get(url, headers=HEADERS, timeout=10)
@@ -78,64 +98,17 @@ def clientCount(data):
 	for client in data['data']:
 		if client['ssid'] not in ssidlist:
 			ssidlist[client['ssid']]=[]
-		ssidlist[client['ssid']].append(client['clientId'])
-
-def faillist_attempt():
-	global faillist
-	templist = {}
-	faildic = {}
-	while faillist:
-		removelist = []
-		countoffailures = len(faillist)
-		prompt_user = input(f"There are {countoffailures} API calls that have failed attempts. Would you like to rety these? (y/n)")
-		while prompt_user.lower() != 'y' and prompt_user.lower() != 'n':
-			prompt_user = input("Please enter 'y' or 'n'")
-		if prompt_user.lower() == 'n':
-			for failurltime in faillist:
-				print(failurltime)
-			return faildic	
-		elif prompt_user.lower() == 'y':
-			failcount = 1
-			for failurltime in faillist:
-				print(f"Trying {failcount} of {len(faillist)}",end=": ")
-				failurl, failtime = failurltime.split("::")
-				try:
-					data = get_api_call(failurl)
-				except TypeError as e:
-					
-					print("Failure")
-					print(f"{e}")
-					
-				except HTTPError as e:
-					
-					print("Failure")
-					print(f"{e}")
-					
-				except:
-					
-					print("Failure")
-					print(f"unknown API error: on API {failurl}")
-					
-				else:
-					faildic[failtime]={}
-					for client in data['data']:
-						if client['ssid'] not in templist:
-							templist[client['ssid']]=[]
-							templist[client['ssid']].append(client['clientId'])
-					for ssid in templist:
-						faildic[failtime][ssid]=len(templist[ssid])
-					removelist.append(f"{failurl}::{failtime}")
-					print("Success")
-				failcount += 1
-		for item in removelist:
-			faillist.remove(item)		
-	return faildic
+		if client['clientId'] not in ssidlist[client['ssid']]:
+			ssidlist[client['ssid']].append(client['clientId'])
 		
 	
 def main():
 	global today
 	global API_start_time
 	global secondtry
+	global ssidlist
+
+	
 	filenamedate = today.strftime('%Y-%m-%d_%H00')
 	
 	ssid_dic = {}
@@ -154,125 +127,108 @@ def main():
 		# default values for next while loop
 		pageCount = 0
 		success = 0 
-		count = 1
 		
 		# initial API call will try 5 times and if fails script will terminate.
-		while success == 0:
-			if count > 5:
-				print(f"API call has failed more than 5 times: {url}")
-				prompt_user = input('Would you like to continue trying 5 more times? (y/n)')
-				while prompt_user.lower() != 'y' and prompt_user.lower() != 'n':
-					prompt_user = input("Please enter 'y' or 'n'")
-				if prompt_user.lower() == 'y':
-					count = 0
-				elif prompt_user.lower() == 'n':
-					print("Please try running the following API call in 'other script'.")
-					print(f"{url}")
-
-					prompt_user = input("\nWould you like to continue with the next iteration? (y/n)")
-					while prompt_user.lower() != 'y' and prompt_user.lower() != 'n':
-						prompt_user = input("Please enter 'y' or 'n'")
-					if prompt_user.lower() == 'y':
-						print(f"Skipping {API_start_time}")
-						success = 2
-						break
-					elif prompt_user.lower() == 'n':
-						exit()					
+		for count in range(1, totalretries):
+			print(f"Initial API call attempt {count} of {totalretries}", end=': ')		
 			try:
 				data = get_api_call(url)
 			except TypeError as e:
-				count+=1
-				print(f"{e} - attempt {count} of 5")		
+				logging.error(f"{filenamedate} - API failed attempt {count} of {totalretries} with error {e}")
+				print("Failed - see log file for details")
+				count+=1		
 			except HTTPError as e:
-				print(f"{e}")		
-				prompt_user = input("Would you like to try this call again? (y/n)")
-				while prompt_user.lower() != 'y' and prompt_user.lower() != 'n':
-					prompt_user = input("Please enter 'y' or 'n'")
-				if prompt_user.lower() == 'y':
-					count+=1
-					print(f"{e} - attempt {count} of 5")
-				elif prompt_user.lower() == 'n':
-					if not data:
-						data = {}
-					success = 2
-					break
+				logging.error(f"{filenamedate} - API failed attempt {count} of {totalretries} with error {e}")
+				print("Failed - see log file for details")		
+				count+=1
 			except:
-				print(f"unknown API error: on API {url}")
-				prompt_user = input("Would you like to try this call again? (y/n)")
-				while prompt_user.lower() != 'y' and prompt_user.lower() != 'n':
-					prompt_user = input("Please enter 'y' or 'n'")
-				if prompt_user == 'y':
-					count+=1
-					print(f"Unknown API error - attempt {count} of 5")
-				elif prompt_user == 'n':
-					success = 2
-					break
+				logging.error(f"{filenamedate} - API failed attempt {count} of {totalretries} with unknown API error:\n 	{url}")
+				print("Failed - see log file for details")		
+				count+=1
 			else:
-				print("successful connection")
+				print("Successful Connection")
 				success = 1
-		if success == 2:
+				break
+
+		if success != 1:
+			logging.warning(f"API call has failed more than {totalretries} times: {url}\n")
+			logging.info(f"No data was collected for {API_start_time}\n")
+			print(f"Skipping {API_start_time}")
+			API_start_time = API_start_time + datetime.timedelta (hours=iteration_hours)
 			continue
 		
 		# gets total count of clients and the count of clients in the initial call
 		totalCount = data['pagination']['totalCount']
 		countInPage = data['pagination']['countInPage']
 		clientCount(data)
-	
 		# checks to see if client info is missing from initial call
 		if countInPage < totalCount:
 			# calculates the number of pages needed to get all client info (rounded up)
 			pageCount = math.ceil(int(totalCount)/int(countInPage))
-			for page in range(int(pageCount)):
-				page+=1
+			for page in range(1, int(pageCount)):
 				pagedurl = '{}&page={}'.format(url, page)
 				try:
 					data = get_api_call(pagedurl,page=page,pageCount=pageCount)
 				except TypeError as e:
-					print(f"{e}")
+					logging.error(f"{filenamedate} - API failed with error {e}")
+					print(f"Failed page {page} - see log file for details")		
 					secondtry.append(pagedurl)
 					continue
 				except HTTPError as e:
-					print(f"{e}")
+					logging.error(f"{filenamedate} - API failed with error {e}")
+					print(f"Failed page {page}- see log file for details")		
 					secondtry.append(pagedurl)
 					continue
 				except:
-					print(f"unknown API error: on API {pagedurl}")
+					logging.error(f"{filenamedate} - API failed with unknown API error:\n 	{pagedurl}")
+					print(f"Failed page {page} - see log file for details")		
 					secondtry.append(pagedurl)
 					continue
-
+				print("successful")
 				clientCount(data)
 		
 		# checks if there are any API calls to try again
 		if secondtry:
-			print(f"\nThere were {len(secondtry)} API calls that failed\n")
-			retrycount = 1
-			for url in secondtry:
-				print(f"Retry {retrycount} of {len(secondtry)}",end=": ")
-				try:
-					data = get_api_call(url)
-				except TypeError as e:
-					faillist.append(f"{url}::{startTime}")
-					print("Failure - added to Failed list")
-					print(f"{e}")
-					retrycount += 1
-					continue
-				except HTTPError as e:
-					faillist.append(f"{url}::{startTime}")
-					print("Failure - added to Failed list")
-					print(f"{e}")
-					retrycount += 1
-					continue
-				except:
-					faillist.append(f"{url}::{startTime}")
-					print("Failure - added to Failed list")
-					print(f"unknown API error: on API {url}")
-					retrycount += 1
-					continue
-				print(f"Successful")
-				retrycount += 1
-				clientCount(data)
-			print("\n")
-			
+			retrysuccess = 0
+			for retrycount in range(1, totalretries):
+				removelist = []
+				print(f"\nThere were {len(secondtry)} API calls that failed {retrycount} times(s)\n")
+				apicallcount = 1
+				for url in secondtry:
+					print(f"Attempting retry {apicallcount} of {len(secondtry)}",end=": ")
+					try:
+						data = get_api_call(url)
+					except TypeError as e:
+						apicallcount+=1
+						logging.error(f"{filenamedate} - API failed retry attempt with error {e}:\n	{url}")
+						print("Failed - see log file for details")
+					except HTTPError as e:
+						apicallcount+=1
+						logging.error(f"{filenamedate} - API failed retry attempt with error {e}:\n	{url}")
+						print("Failed - see log file for details")
+					except:
+						apicallcount+=1
+						logging.error(f"{filenamedate} - API failed attempt {count} of {totalretries} with unknown API error:\n 	{url}")
+						print("Failed - see log file for details")
+					else:
+						apicallcount+=1
+						removelist.append(url)
+						clientCount(data)
+						print(f"Successful")
+						retrysuccess = 1
+
+				for item in removelist:
+					secondtry.remove(item) 
+				if not secondtry:	
+					break
+			if retrysuccess != 1:
+				print(f"There were {len(secondtry)} APIs that failed {retrycount} times. Check logs for details")
+				logging.warning(f"These are the {len(secondtry)} APIs that failed {retrycount} times:\n")
+
+				for url in secondtry:
+					logging.info("  {url}")
+
+
 		# adds a dictionary inside of ssid_dic with the value of the startTime
 		ssid_dic[startTime]={}
 		for ssid in ssidlist:
@@ -280,40 +236,25 @@ def main():
 			ssid_dic[startTime][ssid]= len(ssidlist[ssid])
  
 		# over writes the json file with the collected data which includes:
-		### all data imported from the data.json file at the beginning
 		### all data from previous API_start_time values while the script has been running
 		### current API_start_time data
 		with open('{}/{}_data.json'.format(PATH,filenamedate), 'w') as f:
 			json.dump(ssid_dic, f)
 
-		print(f"completed capture at {API_start_time}\n")
+		print(f"completed capture at {startTime}\n")
 		
 		# adds hour iteration to the API_start_time for the next loop
 		API_start_time = API_start_time + datetime.timedelta (hours=iteration_hours)
 		# empties the secondtry list for the next loop
 		secondtry = []
-	# if any APIs fail the secondtry they are added to the faillist list. 
-	# this prints the list to be collected seperately
-
-	if faillist:
-		faileddata = faillist_attempt()
-		for starttime in faileddata:
-			if starttime not in ssid_dic:
-				ssid_dic[starttime]={}
-			for failedssid in faileddata[starttime]:
-				if failedssid not in ssid_dic[starttime]:
-					ssid_dic[starttime][failedssid] = faileddata[starttime][failedssid]
-				else:
-					totalclientcount = ssid_dic[starttime][failedssid] + faileddata[starttime][failedssid]
-					ssid_dic[starttime][failedssid] = totalclientcount
+		ssidlist = {}
 
 	# over writes the json file with the collected data which includes:
-	### all data imported from the data.json file at the beginning
 	### all data from previous API_start_time values while the script has been running
 	### current API_start_time data from failedlist
-
-	with open('{}/{}_data.json'.format(PATH,filenamedate), 'w') as f:
-		json.dump(ssid_dic, f)
+	#if ssid_dic:
+	#	with open('{}/{}_data.json'.format(PATH,filenamedate), 'w') as f:
+	#		json.dump(ssid_dic, f)
 
 	#print(ssid_dic)
 	
