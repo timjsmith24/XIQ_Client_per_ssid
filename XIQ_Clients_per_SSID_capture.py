@@ -73,7 +73,6 @@ def get_api_call(url, page=0, pageCount=0):
 	#print(f"####{url}####")
 	if pageCount != 0:
 		print(f"API call on page {page} of {pageCount-1}", end=": ")
-
 	try:
 		r = requests.get(url, headers=HEADERS, timeout=10)
 	except HTTPError as http_err:
@@ -248,13 +247,6 @@ def main():
 		# empties the secondtry list for the next loop
 		secondtry = []
 		ssidlist = {}
-
-	# over writes the json file with the collected data which includes:
-	### all data from previous API_start_time values while the script has been running
-	### current API_start_time data from failedlist
-	#if ssid_dic:
-	#	with open('{}/{}_data.json'.format(PATH,filenamedate), 'w') as f:
-	#		json.dump(ssid_dic, f)
 
 	#print(ssid_dic)
 	
