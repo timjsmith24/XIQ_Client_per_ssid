@@ -3,5 +3,5 @@ Sublime/
 venv/
 .Python
 XIQ_report.xlsx
-data.json
+*data.json
 time.py
