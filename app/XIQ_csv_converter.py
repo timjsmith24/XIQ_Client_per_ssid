@@ -28,7 +28,7 @@ def clientperssid(data):
 			msg += ("\n")
 		return(msg)
 	else:
-		print("Failed to load data")
+		print("Failed to load data in Excel converter")
 		exit()
 def jsontoexcel(data, PATH, excelfilename):
 
