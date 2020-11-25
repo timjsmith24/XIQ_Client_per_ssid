@@ -6,7 +6,11 @@ import time
 import os
 import datetime
 import logging
+from pytz import timezone
 from requests.exceptions import HTTPError
+from app.XIQ_csv_converter import jsontoexcel
+
+timzoneadjust = timezone('US/Eastern')
 
 PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -108,7 +112,8 @@ def main():
 	global ssidlist
 
 	
-	filenamedate = API_start_time.strftime('%Y-%m-%d_%H00')
+	filenamedate = timzoneadjust.normalize(API_start_time)
+	filenamedate = filenamedate.strftime('%Y-%m-%d_%H00')
 	
 	ssid_dic = {}
 	
@@ -116,10 +121,13 @@ def main():
 	while API_end_time > API_start_time:
 		# gets the startTime in correct format to be added to the API call
 		startTime = API_start_time.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+		# adjusts time for user readable timezone - line 14
+		adjustedtime = timzoneadjust.normalize(API_start_time)
+		adjustedtime = adjustedtime.strftime('%Y-%m-%d %H:%M:%S %Z%z')
 		# gets the endTime in correct format to be added to the API call
 		endTime = API_start_time + datetime.timedelta (hours=iteration_hours)
 		endTime = endTime.strftime('%Y-%m-%dT%H:%M:%S.000Z')
-		print(f"collecting client data for {startTime}")
+		print(f"collecting client data for {adjustedtime}")
 		# adds the base url info as well as the startTime and endTime to the url
 		url = "{}/xapi/v1/monitor/clients?ownerId={}&startTime={}&endTime={}".format(baseurl, ownerId, startTime, endTime)
 
@@ -229,10 +237,10 @@ def main():
 
 
 		# adds a dictionary inside of ssid_dic with the value of the startTime
-		ssid_dic[startTime]={}
+		ssid_dic[adjustedtime]={}
 		for ssid in ssidlist:
 			# adds each ssid and the count of clients into the startTime dictionary
-			ssid_dic[startTime][ssid]= len(ssidlist[ssid])
+			ssid_dic[adjustedtime][ssid]= len(ssidlist[ssid])
  
 		# over writes the json file with the collected data which includes:
 		### all data from previous API_start_time values while the script has been running
@@ -240,7 +248,7 @@ def main():
 		with open('{}/{}_data.json'.format(PATH,filenamedate), 'w') as f:
 			json.dump(ssid_dic, f)
 
-		print(f"completed capture at {startTime}\n")
+		print(f"completed capture at {adjustedtime}\n")
 		
 		# adds hour iteration to the API_start_time for the next loop
 		API_start_time = API_start_time + datetime.timedelta (hours=iteration_hours)
@@ -249,7 +257,9 @@ def main():
 		ssidlist = {}
 
 	#print(ssid_dic)
-	
+	#Export data to excel file
+	excelfilename = (f'{filenamedate}_data.xlsx')
+	jsontoexcel(ssid_dic, PATH, excelfilename)
 
 if __name__ == '__main__':
 	main()
