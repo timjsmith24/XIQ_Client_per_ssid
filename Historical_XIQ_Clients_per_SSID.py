@@ -5,11 +5,13 @@ import math
 import time
 import os
 import datetime
+import pytz
 import logging
 from pytz import timezone
 from requests.exceptions import HTTPError
 from app.XIQ_csv_converter import jsontoexcel
 
+UTC = pytz.utc
 timzoneadjust = timezone('US/Eastern')
 
 PATH = os.path.dirname(os.path.abspath(__file__))
@@ -17,11 +19,11 @@ PATH = os.path.dirname(os.path.abspath(__file__))
 # Used to setting times in API call
 # Please enter time in Zulu format
 API_start_time = '2020-11-1T18:00:00.000Z'
-API_end_time = '2020-11-20T18:00:00.000Z'
+API_end_time = '2020-11-2T18:00:00.000Z'
 
 #converting time string into time format
-API_start_time = datetime.datetime.strptime(API_start_time, '%Y-%m-%dT%H:%M:%S.000Z')
-API_end_time = datetime.datetime.strptime(API_end_time, '%Y-%m-%dT%H:%M:%S.000Z')
+API_start_time = datetime.datetime.strptime(API_start_time, '%Y-%m-%dT%H:%M:%S.000Z').replace(tzinfo=UTC)
+API_end_time = datetime.datetime.strptime(API_end_time, '%Y-%m-%dT%H:%M:%S.000Z').replace(tzinfo=UTC)
 
 # User variables
 iteration_hours = 1
@@ -111,7 +113,7 @@ def main():
 	global secondtry
 	global ssidlist
 
-	
+
 	filenamedate = timzoneadjust.normalize(API_start_time)
 	filenamedate = filenamedate.strftime('%Y-%m-%d_%H00')
 	
