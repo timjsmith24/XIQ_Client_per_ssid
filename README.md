@@ -1,5 +1,8 @@
 # XIQ Collecting Client Count per SSID
 ## XIQ_Clients_per_SSID_capture.py
+
+_The software is provided as-is and timjsmith24 has no obligation to provide maintenance, support, updates, enhancements, or modifications. Any support provided by timjsmith24 is at its sole discretion._
+
 ### Purpose
 This script will collect the number of clients connected to each SSID per hour over the last 24 hours. The amount of times data is collected can be adjusted but default is set to collect every hour. This data is stored in a json file. The script also exports the data to an excel file.
 ### User Input Data
